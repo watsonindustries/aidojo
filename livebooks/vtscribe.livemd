@@ -1,0 +1,309 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# VTScribe
+
+```elixir
+Mix.install([
+  {:httpoison, "~> 2.0"},
+  {:poison, "~> 5.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Client
+
+```elixir
+defmodule SendRequest do
+  @moduledoc """
+  First, make sure you add HTTPoison to your mix.exs dependencies:
+
+  def deps do
+    [{:httpoison, "~> 0.10.0"}]
+  end
+  """
+
+  @doc """
+  # Request
+  # POST https://danirukun--vtscribe-transcribe-dev.modal.run/?video_id=NRicZy2P8Tk
+  """
+  def request(video_id) do
+    url = "https://danirukun--vtscribe-transcribe-dev.modal.run/"
+
+    # ====== Headers ======
+    headers = []
+
+    # ====== Query Params ======
+    params = [
+      {"video_id", video_id}
+    ]
+
+    # ====== Body ======
+    body = ""
+
+    HTTPoison.start()
+
+    case HTTPoison.post(url, body, headers, params: params) do
+      {:ok, response = %HTTPoison.Response{status_code: status_code, body: body}} ->
+        IO.puts("Response Status Code: #{status_code}")
+        IO.puts("Response Body: #{body}")
+
+        response
+
+      {:error, error = %HTTPoison.Error{reason: reason}} ->
+        IO.puts("Request failed: #{reason}")
+
+        error
+    end
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, SendRequest, <<70, 79, 82, 49, 0, 0, 12, ...>>, {:request, 1}}
+```
+
+```elixir
+video_id = "tSBod4UC_94"
+
+response = SendRequest.request(video_id)
+Poison.decode!(response.body)["result_url"]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Response Status Code: 202
+Response Body: {"result_url":"http:\/\/danirukun--vtscribe-transcribe-dev.modal.run\/?video_id=tSBod4UC_94&__modal_function_call_id=fc-inMhI4LE041xHQ9H1B6Jha"}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"http://danirukun--vtscribe-transcribe-dev.modal.run/?video_id=tSBod4UC_94&__modal_function_call_id=fc-inMhI4LE041xHQ9H1B6Jha"
+```
+
+```elixir
+defmodule Result do
+  def segments_to_timestamps(segments) do
+    segments
+    |> Stream.map(fn %{"start" => seconds, "text" => text} ->
+      format_timestamp(seconds) <> " #{text}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  def format_timestamp(seconds, always_include_hours \\ true, decimal_marker \\ ".") do
+    milliseconds = round(seconds * 1000.0)
+    hours = div(milliseconds, 3_600_000)
+    minutes = div(milliseconds, 60_000)
+    seconds = div(milliseconds, 1_000)
+
+    hours_marker =
+      if always_include_hours or hours > 0 do
+        hours = to_string(hours)
+        "#{String.pad_leading(hours, 2, "0")}:"
+      else
+        ""
+      end
+
+    minutes = to_string(minutes)
+    seconds = to_string(seconds)
+
+    "#{hours_marker}#{String.pad_leading(minutes, 2, "0")}:#{String.pad_leading(seconds, 2, "0")}"
+  end
+end
+
+# Downloaded using 
+# curl -L -v --http0.9 url --output result.json
+result_file = "result.json"
+
+with {:ok, file} <- File.read("result.json"),
+     {:ok, decoded_res} <- Poison.decode(file),
+     timestamps <- Result.segments_to_timestamps(decoded_res["segments"]) do
+  IO.puts(timestamps)
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+warning: variable "decimal_marker" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  livebooks/vtscribe.livemd#cell:22ns6zz4b5v7skhpgxioy2yvcilfbxdh:13: Result.format_timestamp/3
+
+00:00:00  I joined over 11,000 furries in VRChat to experience one of the largest virtual conventions
+00:00:06  to ever happen, Ferality.
+00:00:08  I'm not a furry, but I am a long-time VR user and enthusiast, so I made it my personal
+00:00:14  mission to finally sit down, figure out what's actually going on here, and document what
+00:00:19  attending a virtual furry convention is like.
+00:00:22  I expect the majority of you watching are not furries and probably haven't been to
+00:00:26  anything like this before, and well, there's a lot to unpack here and it's way more interesting
+00:00:33  than you might think.
+00:00:37  Before we get started, I want to give a huge thanks to this video's sponsor, Ramen VR,
+00:00:42  and their game, Zenith the Last City.
+00:00:45  Inspired by anime, JRPGs, MMOs, and more, Zenith hit the number one best-selling game on Steam,
+00:00:50  Oculus, and PSVR as soon as it launched earlier last year.
+00:00:54  Assuming most of you are VR users already, or at least interested in becoming one, Zenith
+00:00:59  is a great pickup with a lot to check out.
+00:01:62  From dungeons and raids, cooking and crafting, gliding, climbing, pets, and more, there is
+00:01:66  definitely something here that will hit everyone's interests.
+00:01:69  PSVR2 launched literally this week, so now is the perfect time to grab a copy of the
+00:01:74  game and join a huge new influx of users to adventure with.
+00:01:78  Their 1.3 patch is also about to come out, which is bringing a whole new class of character
+00:01:83  you can choose called Cyber Ninja, and just look at the concept design, I think it's by far the
+00:01:88  coolest one yet. Additionally, I'm a massive advocate for full body tracking and how important
+00:01:93  having legs in VR is, and they recently added it to their game which puts it leagues above so
+00:01:99  many other virtual reality titles out there. So yeah, go check out Zenith the Lost City for
+00:01:104  yourself with the link in the description, and go join a guild or something while supporting
+00:01:108  VR development. And with that, back to the video. This is Ferality Luma Festival, a halfway mini-fest
+00:01:115  between the larger version of the convention that's happening later this year. Although Ferality pulls
+00:01:119  in thousands of people for each event, you don't hear a lot about anyone going except for, well,
+00:02:124  furries. And to get the elephant out of the room, people hate furries. Well, at least from what it
+00:02:131  seems on the internet. They've been an easy target to laugh at, cringe at, and make fun of for a long
+00:02:137  time, which isn't necessarily surprising.
+00:02:140  I've personally never had any problem with furries.
+00:02:142  I generally like to hold the belief that people should express themselves however they want,
+00:02:146  but I also never really interacted with them until playing VR.
+00:02:150  And the amount of furries in VRChat is a crazy phenomena.
+00:02:155  There are so many.
+00:02:158  Practically every world you go to, there will be at least one person in some sort of furry
+00:02:162  avatar.
+00:02:163  But why?
+00:02:164  Furries and VR chat feel like a match made in heaven.
+00:02:169  We're the authors, we're the game designers, we are the architects of our own realities.
+00:02:174  I can be who I want to be, whenever I want to be.
+00:02:178  Over and over again, I've talked on this channel about how one of the craziest parts
+00:03:182  of VR is the raw expression you can have when embodying an avatar.
+00:03:186  And while this is appealing to almost everyone for a variety of reasons, it makes perfect
+00:03:191  sense when implying to furries.
+00:03:193  Think about it, people come up with their characters they identify with, aka their fursonas,
+00:03:198  and unlike most cosplays that can be made with relative ease, it's a lot harder to
+00:03:203  dress up as an anthropomorphic character.
+00:03:205  The infamous fursuit is uncomfortable, sweaty, and extremely costly, in some cases even paying
+00:03:211  up to $6,000.
+00:03:213  Now compare this to a VR avatar, not only is it significantly less costly, but they're
+00:03:219  also way closer to the character you might have designed because there's literally zero physical
+00:03:224  limitations from doing what you want. So with that in mind, it makes sense that the community
+00:03:229  would have the resources to put together something like a large-scale festival.
+00:03:234  I'm Dalton. I'm chairman and creative director of Ferality. I found the furry fandom through VRChat.
+00:04:241  I only had a chance to attend a few physical events prior to the pandemic. Within the VR
+00:04:246  furry community, we knew where we were while we saw the overall furry fandom really having a sense
+00:04:255  of loss. There were sort of murmurs in the community of, well, wouldn't it be great if we could
+00:04:260  just attend a convention right here in VRChat? The first Ferality was in 2020 with the founder
+00:04:267  Dalton hoping to pull in a few hundred people at best, but over 2,600 furries came through.
+00:04:274  Of course, things kept expanding, and now there's been a total of five full-ferality conventions,
+00:04:279  along with this past weekend's Luma Festival marking a halfway point before this year's
+00:04:283  sixth event in June, with the most previous convention bringing in over 15,000 registered
+00:04:290  attendees. I never went to any of these events, so with this one being my first, I decided to go
+00:04:295  into full immersion mode and do the absolute unthinkable make my own furry avatar. My online
+00:05:302  username everywhere is Fia Bunny and so obviously I had to pick up bunny and so voila!
+00:05:316  This was 30 hours straight of live music, dancing, and meetups. Despite being a mini event,
+00:05:322  it was jam-packed full of non-stop energy. On my agenda was just a few things. Attend the
+00:05:328  the opening ceremonies, go to the rabbit road at meetup,
+00:05:331  check out the avatar dealer's den,
+00:05:333  and watch the fireworks before the closing ceremonies
+00:05:335  the next night.
+00:05:336  Multiple events run all at once,
+00:05:338  with dozens of individual instances
+00:05:341  to hold the thousands of concurrent attendees
+00:05:343  spread across all the worlds.
+00:05:345  Off the bat, the hype levels were off the charts,
+00:05:347  with the hosts displaying across the worlds as holograms.
+00:05:350  There were zero negative interactions and zero trolls,
+00:05:353  which was weird because as I'm sure you know,
+00:05:356  VRChat is usually full of that.
+00:05:358  Meetups happened for almost every subculture
+00:06:361  and checking meeting out the other furry bunnies
+00:06:363  running around was a really funny experience.
+00:06:366  Everyone had some really interesting and unique avatars
+00:06:369  and so when I headed over to the dealer's den,
+00:06:372  I got to check out some of the ones
+00:06:373  that you could actually buy.
+00:06:374  At the full Ferality conventions,
+00:06:376  things are way more fleshed out with panels and clubs,
+00:06:379  but even just this, well, there was so much going on,
+00:06:383  was almost overwhelming trying to not miss anything.
+00:06:386  But the weirdest thing I saw was on the online site.
+00:06:388  They had a web store where you could buy something
+00:06:391  called immersion spray.
+00:06:392  And obviously I had to cop it immediately.
+00:06:395  Unfortunately though, it didn't end up coming in on time
+00:06:398  despite me paying $20 for the fastest shipping,
+00:06:401  which I actually have still yet to receive.
+00:06:403  I don't even know, but I can't test it, so sorry guys.
+00:06:406  But this is really interesting for a couple of reasons.
+00:06:408  So let me elaborate a bit on why.
+00:06:411  Your brain's smell system is the olfactory bulb,
+00:06:414  and the olfactory bulb is directly connected
+00:06:416  to your amygdala and hippocampus,
+00:06:419  the hotspots for your emotions and memories.
+00:07:422  This is why if you smell a certain scent,
+00:07:424  you immediately get transported to the memories
+00:07:426  and feelings tied to that certain place or person.
+00:07:430  I have tried VR smell devices before,
+00:07:432  but those have always been focused on stuff
+00:07:434  like picking up coffee and triggering the smell of coffee
+00:07:436  to be pumped into your nose.
+00:07:438  This immersion spray, on the other hand,
+00:07:440  is something I've never seen before,
+00:07:442  which is to give Luma Festival a specific sense of place,
+00:07:446  similar to the smell of a friend's house
+00:07:448  or Spaceship Earth at Disney World,
+00:07:449  if you know you know on that one.
+00:07:451  What if we made the play space smell
+00:07:455  like an enchanted forest?
+00:07:456  It smells a little earthy, a little ethereal,
+00:07:460  a little bit sweet.
+00:07:461  For the longest time, the jacket that I was wearing
+00:07:464  while we were doing Luma still had the scent on it,
+00:07:468  and whenever I was driving to go to FWA,
+00:07:471  I still had this smell on my jacket, I'm like...
+00:07:476  The worlds in theming are clearly
+00:07:478  a really important aspect of these conventions,
+00:08:480  and they're unlike places I've ever seen
+00:08:482  in video games, movies, anime, or anything else.
+00:08:485  I love exploring VRChat worlds that people upload.
+00:08:488  I think there's something really special
+00:08:490  about exploring places from other people's imaginations.
+00:08:493  Seeing the concepts and time and energy
+00:08:496  that goes into this really struck me in a way I didn't expect from going to a furry con.
+00:08:501  After thinking for a bit, I got really shocked to think of how judgmental we are from the outside looking in on this.
+00:08:507  I feel like the misconception comes from the issue of like the squeaky wheel gets the attention.
+00:08:513  It's unfortunate that people just associate furries with, oh, they like f***ing animals or something like that, pardon the French.
+00:08:521  Furry culture in general is quite misunderstood.
+00:08:524  prior media that has misconstrued what furry culture is like.
+00:08:528  I don't blame them, it gets clicks.
+00:08:530  I mean, you see how Twitter is these days with anything, causes drama,
+00:08:533  everybody goes insane about it.
+00:08:534  And it's just that furries and their drama have stuck around a lot
+00:08:537  because a lot of the subcultures within furry communities are neurodivergent,
+00:09:544  which means there's a lot of social immaturity at times.
+00:09:547  And that tends towards lending towards drama.
+00:09:551  but there are also the most mature, friendly, insanely loving individuals
+00:09:558  I have never felt love in my life before, like I have in the furry community.
+00:09:563  Honestly, after all of this, my perception on furries has really changed.
+00:09:567  What once seemed a bit silly now feels like a whole fun new world to be uncovered.
+00:09:572  You can really tell how passionate they are about creating unique characters and worlds,
+00:09:577  the kind of imagination and creativity that shines best inside virtual reality.
+00:09:582  I didn't expect to enjoy being one myself for a little while, but the respect I have for this
+00:09:586  community has grown by a lot. I think they might just be the most progressive designers, developers,
+00:09:592  and creatives virtual reality has to offer right now, and that's something that I think is truly
+00:09:598  spectacular. If you're interested in checking out Ferality for yourself, the next convention is going
+00:10:603  to be a tropical jungle theme on June 2nd through 4th. I'm linking their socials down below so you
+00:10:608  can stay up to date and give it a chance just like I did. Please like and subscribe to support as I
+00:10:613  have a bunch of new videos in the works about other unique aspects of VR culture and technology,
+00:10:619  and of course our monthly TBR studio live events. But anyway, thanks so much for watching. I've been
+00:10:625  your host Fia and I'll see you in the next video. Bye!
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
